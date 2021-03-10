@@ -21,6 +21,31 @@ def interpolate_to_parent(start, end, linspace_count):
     return np.array([start[i] + v[i] * l for i in range(3)])
 
 
+def scale_image(pixels, size):
+    """
+        Scale points to [0..size]
+
+        points = np arr
+    """
+    x_min, x_max = np.amin(pixels[:,0]), np.amax(pixels[:,0])
+    y_min, y_max = np.amin(pixels[:,1]), np.amax(pixels[:,1])
+    z_min, z_max = np.amin(pixels[:,2]), np.amax(pixels[:,2])
+    
+    pixels[:,0] -= x_min    
+    pixels[:,1] -= y_min
+    pixels[:,2] -= z_min
+    
+    x_max -= x_min
+    y_max -= y_min
+    z_max -= z_min
+    
+    scale_factor = size / max(x_max, y_max, z_max) 
+    # All points are now between [0..max]
+
+    pixels *= scale_factor
+    return pixels
+
+    
 
 start = time.time()
 
@@ -49,36 +74,21 @@ for n in neuron:
 
     pixels.append(p1.tolist())
 
-    X, Y, Z = interpolate_to_parent(p1, p2, 500)
+    X, Y, Z = interpolate_to_parent(p1, p2, 100)
 
     for i in range(len(X)):
         pixels.append([X[i], Y[i], Z[i]])
 
 
 pixels = np.array(pixels)
+
+size = 128
+
+pixels = scale_image(pixels, size-1)
+
 pixels = pixels.astype(int)
 
-x_min, x_max = np.amin(pixels[:,0]), np.amax(pixels[:,0])
-y_min, y_max = np.amin(pixels[:,1]), np.amax(pixels[:,1])
-z_min, z_max = np.amin(pixels[:,2]), np.amax(pixels[:,2])
-
-print(x_min, x_max)
-print(y_min, y_max)
-print(z_min, z_max)
-
-pixels[:,0] -= x_min 
-pixels[:,1] -= y_min
-pixels[:,2] -= z_min
-
-x_max -= x_min
-y_max -= y_min
-z_max -= z_min
-
-
-# TODO: Center image? 
-
-image = np.zeros((z_max+1, x_max+1, y_max+1))
-
+image = np.zeros((size, size, size), dtype=bool)
 
 for n in pixels:
     x = n[0]
@@ -95,7 +105,7 @@ end = time.time()
 
 print(f'THIS THING TOOK %f TIME' %(end-start))
 
-ax.scatter(x, y, z, s=0.1)
+ax.scatter(x, y, z, s=1)
 
 
 plt.show()
