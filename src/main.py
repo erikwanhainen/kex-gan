@@ -49,7 +49,7 @@ def scale_image(pixels, size):
 
 start = time.time()
 
-with open('../swc_files/10075.CNG.swc') as f:
+with open('../swc_files/118578.CNG.swc') as f:
     for lines in f:
         if lines[0] == '#':
             continue
@@ -82,7 +82,7 @@ for n in neuron:
 
 pixels = np.array(pixels)
 
-size = 128
+size = 256
 
 pixels = scale_image(pixels, size-1)
 
@@ -105,6 +105,9 @@ end = time.time()
 
 print(f'THIS THING TOOK %f TIME' %(end-start))
 
+ax.set_xlim(0,size)
+ax.set_ylim(0,size)
+ax.set_zlim(0,size)
 ax.scatter(x, y, z, s=1)
 
 
