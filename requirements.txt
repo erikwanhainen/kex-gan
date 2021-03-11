@@ -1,0 +1,3 @@
+tensorflow==2.4.1
+tensorlayer==2.2.3
+scripts==2.0

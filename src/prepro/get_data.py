@@ -6,7 +6,7 @@ QURERY_PARAMS = 'species:mouse,rat&fq=cell_type:pyramidal&fq=brain_region:neocor
 def get_swc(archive_name, CNG_version, neruon_name, neuron_id):
     url = 'http://neuromorpho.org/dableFiles/' + archive_name.lower() + '/' + CNG_version + '/' + neruon_name + '.CNG.swc'
     response = requests.get(url)
-    with open(r'../swc_files/' + str(neuron_id) + '.CNG.swc', 'wb') as f:
+    with open(r'./swc_files/' + str(neuron_id) + '.CNG.swc', 'wb') as f:
         f.write(response.content)
 
 
