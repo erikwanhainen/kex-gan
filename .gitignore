@@ -1,1 +1,3 @@
 swc_files/*
+src/data/*
+*/__pycache__/*
