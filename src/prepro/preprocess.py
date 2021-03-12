@@ -19,14 +19,35 @@ class Preprocess():
             Assume start end numpy vectors 
             based on neurom
         """
-
+        
         v = end - start
         length = norm(v)
         v = v / length # Make v a unit vector
-
         l = np.linspace(0, length, linspace_count) 
 
         return np.array([start[i] + v[i] * l for i in range(3)])
+
+
+    def interpolate_to_parent_with_radius(self, start, end, r_start, r_end, linspace_count):
+        v = end - start
+        length = norm(v)
+        v = v / length # Make v a unit vector
+        res = self.interpolate_to_parent(start, end, linspace_count)
+
+        if r_start > 1:
+            o1 = np.random.randn(3)  # normalized orthogonal vector 1
+            o1 -= o1.dot(v) * v
+            o1 /= np.linalg.norm(o1)
+            o2 = np.cross(v, o1)  # normalized orthogonal vector 2
+
+            for i in range(int(r_start)):
+                for j in range(int(r_start)):
+                    if abs(i) + abs(j) <= int(r_start):
+                        line = self.interpolate_to_parent(start + (o1*i + o2*j),
+                                                          end + (o1*i + o2*j), linspace_count)
+                        res = np.concatenate((res, line), axis=1)
+
+        return res 
 
 
     def scale_image(self, pixels, size):
@@ -71,9 +92,11 @@ class Preprocess():
                 pixels.append(n[2:5])
                 continue
             p1 = n[2:5]
+            r1 = n[5]
             p2 = neuron[int(n[6])-1][2:5]
+            r2 = neuron[int(n[6])-1][5]
             pixels.append(p1.tolist())
-            X, Y, Z = self.interpolate_to_parent(p1, p2, 100)
+            X, Y, Z = self.interpolate_to_parent_with_radius(p1, p2, r1, r2, 100)
             for i in range(len(X)):
                 pixels.append([X[i], Y[i], Z[i]])
 
@@ -105,7 +128,8 @@ class Preprocess():
             np.save(f, image)
 
 
-if __name__ == '__main__':
+
+def save_all_files():
     for root, dirs, files in os.walk(SWC_FILES_PATH):
         for file in files:
             try:
@@ -114,5 +138,9 @@ if __name__ == '__main__':
                 p.save(image, file)
                 print('DONE:', file)
             except Exception as e:
-                print('ERROR:', e)
+                print('ERROR:', file, e)
 
+
+if __name__ == '__main__':
+    p = Preprocess('./swc_files/136009.CNG.swc')
+    p.plot(p.get_image())
