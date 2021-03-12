@@ -40,8 +40,8 @@ class Preprocess():
             o1 /= np.linalg.norm(o1)
             o2 = np.cross(v, o1)  # normalized orthogonal vector 2
 
-            for i in range(int(r_start)):
-                for j in range(int(r_start)):
+            for i in range(-int(r_start), int(r_start)+1):
+                for j in range(-int(r_start), int(r_start)+1):
                     if abs(i) + abs(j) <= int(r_start):
                         line = self.interpolate_to_parent(start + (o1*i + o2*j),
                                                           end + (o1*i + o2*j), linspace_count)
