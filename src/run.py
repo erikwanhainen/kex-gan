@@ -134,7 +134,7 @@ discriminator = discriminator_model()
 decision = discriminator(generated_image)
 print(decision)
 
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 #img = generated_image[0, :, :, :, 0].numpy() # IMG IS float32 type !
 
@@ -262,9 +262,9 @@ def train(dataset, epochs):
       numpy_images = images[0].numpy()
       print(discriminator(numpy_images, training=False))
 
-    for i in range(gen_amount):
-      img = generated_image[i, :, :, :, 0].numpy() # IMG IS float32 type !
-      plot(img, 0.4) # cut off = 0.4
+#    for i in range(gen_amount):
+#      img = generated_image[i, :, :, :, 0].numpy() # IMG IS float32 type !
+#      plot(img, 0.4) # cut off = 0.4
     # Print discriminator of generated_images :)
 
   ## Display image gif thingy
