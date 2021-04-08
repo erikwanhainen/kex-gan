@@ -1,7 +1,7 @@
 #from google.colab import drive
 #drive.mount('/content/drive')
 
-import tensorflow as tf 
+import tensorflow as tf
 import numpy as np
 from tensorflow.keras import layers
 from tensorflow.keras import activations
@@ -10,17 +10,17 @@ import os
 import time
 #
 
-#### CONSTANTS 
+#### CONSTANTS
 RESOLUTION = 128
 BUFFER_SIZE = 30 # https://stackoverflow.com/questions/46444018/meaning-of-buffer-size-in-dataset-map-dataset-prefetch-and-dataset-shuffle
-BATCH_SIZE = 15
+BATCH_SIZE = 16
 NOISE_DIM = 200
 RESTORE = False
 NUM_DISC_UPDATES = 5
 LAMBDA = 10
 
 ##### CREATE DATASET FROM NPY FILES ##########
-ds_files = tf.data.Dataset.list_files(f'./src/data/{RESOLUTION}/*.npy', shuffle = True)
+ds_files = tf.data.Dataset.list_files(f'../data/{RESOLUTION}/*.npy', shuffle = True)
 
 def read_npy_file(filename):
     data = np.load(filename.numpy().decode()).reshape(RESOLUTION,RESOLUTION,RESOLUTION,1)
@@ -28,9 +28,9 @@ def read_npy_file(filename):
 
 def process_path(file_path):
   """
-    Read npy file 
+    Read npy file
   """
-  image = tf.py_function(read_npy_file, [file_path],[tf.float32,]) 
+  image = tf.py_function(read_npy_file, [file_path],[tf.float32,])
   return image
 
 dataset = ds_files.map(process_path)
@@ -132,7 +132,7 @@ generated_image = generator(noise, training=False)
 
 discriminator = discriminator_model()
 decision = discriminator(generated_image)
-print(decision)
+#print(decision)
 
 #import matplotlib.pyplot as plt
 
@@ -165,7 +165,7 @@ def gradient_penalty(real_data, fake_data, disc):
   inter = tf.stack(inter)
   interpolates = real_data + inter
 
-  with tf.GradientTape() as tape: 
+  with tf.GradientTape() as tape:
     tape.watch(interpolates)
     prediction = disc(interpolates)
   gradients = tape.gradient(prediction, interpolates)
@@ -186,7 +186,7 @@ def ws_gen_loss(fake_output):
 
 ## Define optimizer  ##
 # parameters taken from https://github.com/igul222/improved_wgan_training/blob/master/gan_toy.py
-generator_optimizer = tf.keras.optimizers.Adam(1e-4, beta_1=0.5, beta_2=0.9)  
+generator_optimizer = tf.keras.optimizers.Adam(1e-4, beta_1=0.5, beta_2=0.9)
 discriminator_optimizer = tf.keras.optimizers.Adam(1e-4, beta_1=0.5, beta_2=0.9)
 
 ##### Save and restore model during training #####
@@ -254,18 +254,18 @@ def train(dataset, epochs):
         checkpoint.save(file_prefix = checkpoint_prefix)
 
     print('Time for epoch {} is {} sec'.format(epoch + 1, time.time()-start))
-    print('PRINTING DISCRIMINATOR THINGS :D ')
+    #print('PRINTING DISCRIMINATOR THINGS :D ')
     generated_image = generator(noise, training=False)
-    print(discriminator(generated_image))
+    #print(discriminator(generated_image))
 
-    for images in dataset.take(1):
-      numpy_images = images[0].numpy()
-      print(discriminator(numpy_images, training=False))
-
+#    for images in dataset.take(1):
+#      numpy_images = images[0].numpy()
+#      print(discriminator(numpy_images, training=False))
+#
 #    for i in range(gen_amount):
 #      img = generated_image[i, :, :, :, 0].numpy() # IMG IS float32 type !
 #      plot(img, 0.4) # cut off = 0.4
-    # Print discriminator of generated_images :)
+#    # Print discriminator of generated_images :)
 
   ## Display image gif thingy
 
@@ -285,13 +285,13 @@ generated_image = generator(noise, training=False)
 
 #print(discriminator(generated_image, training=False))
 
-print('random real')
-for images in train_ds.take(1):  # only take first element of dataset
-  numpy_images = images[0].numpy()
-  #print(discriminator(numpy_images, training=False))
-  plot(numpy_images[0,:,:,:,0], cut_off)
-
-print('generated')
-for i in range(gen_amount):
-  img = generated_image[i, :, :, :, 0].numpy() #
-  plot(img, cut_off)
+#print('random real')
+#for images in train_ds.take(1):  # only take first element of dataset
+#  numpy_images = images[0].numpy()
+#  #print(discriminator(numpy_images, training=False))
+#  plot(numpy_images[0,:,:,:,0], cut_off)
+#
+#print('generated')
+#for i in range(gen_amount):
+#  img = generated_image[i, :, :, :, 0].numpy() #
+#  plot(img, cut_off)
