@@ -200,7 +200,7 @@ dataset = ds_files.map(process_path)
 train_ds = dataset.shuffle(BUFFER_SIZE).batch(
     BATCH_SIZE, drop_remainder=True)  # drop if the data is not evenly split
 # Create distributed dataset depending on strategy
-dist_ds = mirrored_strategy.experimental_distribute_dataset(train_ds)
+dist_ds = strategy.experimental_distribute_dataset(train_ds)
 
 
 # TRAINING LOOP
