@@ -138,10 +138,11 @@ def gradient_penalty(real_data, fake_data, disc):
       real_data: shapes from batch
       fake_data: generated samples
     """
-    alpha = tf.random.uniform(shape=[BATCH_SIZE, 1], minval=0., maxval=1.)
+    bs = int(BATCH_SIZE/2)
+    alpha = tf.random.uniform(shape=[bs, 1], minval=0., maxval=1.)
     difference = fake_data - real_data
     inter = []
-    for i in range(BATCH_SIZE):
+    for i in range(bs):
         inter.append(difference[i] * alpha[i])
     inter = tf.stack(inter)
     interpolates = real_data + inter
