@@ -210,12 +210,14 @@ EPOCHS = 60
 
 def train(dataset, epochs, disc_updates):
     count = 0
-    for _ in range(epochs):
+    for e in range(epochs):
         for image_batch in dist_ds:
             dist_train_step(image_batch, disc_updates)
             count += 1
-            print(count*BATCH_SIZE)
+            print(count*BATCH_SIZE, flush=True)
         checkpoint.save(file_prefix=checkpoint_prefix)
+        count = 0
+        print('----- EPOCH DONE -----', e)
 
 
 @tf.function
@@ -261,9 +263,9 @@ def train_step(images, disc_updates):
         zip(gradients_of_generator, generator.trainable_variables))
 
 
-# print("Starting train")
-# if RESTORE:
-#     checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
-#     print('Restoring last model')
+print("Starting train")
+if RESTORE:
+    checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+    print('Restoring last model')
 
 train(dist_ds, EPOCHS, NUM_DISC_UPDATES)
