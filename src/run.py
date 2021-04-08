@@ -10,7 +10,7 @@ import time
 # CONSTANTS
 RESOLUTION = 128
 BUFFER_SIZE = 30  # https://stackoverflow.com/questions/46444018/meaning-of-buffer-size-in-dataset-map-dataset-prefetch-and-dataset-shuffle
-BATCH_SIZE = 16
+BATCH_SIZE = 32
 NOISE_DIM = 200
 RESTORE = False
 NUM_DISC_UPDATES = 5
@@ -208,10 +208,12 @@ EPOCHS = 60
 
 
 def train(dataset, epochs, disc_updates):
+    count = 0
     for _ in range(epochs):
         for image_batch in dist_ds:
             dist_train_step(image_batch, disc_updates)
-
+            count += 1
+            print(count*BATCH_SIZE)
         checkpoint.save(file_prefix=checkpoint_prefix)
 
 
@@ -226,7 +228,7 @@ def train_step(images, disc_updates):
     """
 
     for _ in range(disc_updates):
-        noise = tf.random.normal([BATCH_SIZE, NOISE_DIM])
+        noise = tf.random.normal([BATCH_SIZE/2, NOISE_DIM])
         with tf.GradientTape() as disc_tape:
             generated_images = generator(noise, training=True)
 
@@ -243,7 +245,7 @@ def train_step(images, disc_updates):
         discriminator_optimizer.apply_gradients(
             zip(gradients_of_discriminator, discriminator.trainable_variables))
 
-    noise = tf.random.normal([BATCH_SIZE, NOISE_DIM])
+    noise = tf.random.normal([BATCH_SIZE/2, NOISE_DIM])
     with tf.GradientTape() as gen_tape:
         generated_images = generator(noise, training=True)
 
