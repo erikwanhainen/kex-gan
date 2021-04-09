@@ -12,7 +12,7 @@ RESOLUTION = 128
 BUFFER_SIZE = 30  # https://stackoverflow.com/questions/46444018/meaning-of-buffer-size-in-dataset-map-dataset-prefetch-and-dataset-shuffle
 BATCH_SIZE = 32
 NOISE_DIM = 200
-RESTORE = False
+RESTORE = True
 NUM_DISC_UPDATES = 5
 LAMBDA = 10
 
@@ -175,34 +175,34 @@ checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
 
 ##### DEFINE STRATEGY AND INIT MODELS, OPTIMIZERS #####
 
-strategy = tf.distribute.MirroredStrategy()
+#strategy = tf.distribute.MirroredStrategy()
 
-with strategy.scope():
+#with strategy.scope():
     # Create the models
-    generator = generator_model()
-    discriminator = discriminator_model()
+generator = generator_model()
+discriminator = discriminator_model()
 
     ## Define optimizer  ##
     # parameters taken from https://github.com/igul222/improved_wgan_training/blob/master/gan_toy.py
-    generator_optimizer = tf.keras.optimizers.Adam(
-        1e-4, beta_1=0.5, beta_2=0.9)
-    discriminator_optimizer = tf.keras.optimizers.Adam(
-        1e-4, beta_1=0.5, beta_2=0.9)
+generator_optimizer = tf.keras.optimizers.Adam(
+    1e-4, beta_1=0.5, beta_2=0.9)
+discriminator_optimizer = tf.keras.optimizers.Adam(
+    1e-4, beta_1=0.5, beta_2=0.9)
 
-    checkpoint = tf.train.Checkpoint(generator_optimizer=generator_optimizer,
-                                     discriminator_optimizer=discriminator_optimizer,
-                                     generator=generator,
-                                     discriminator=discriminator)
+checkpoint = tf.train.Checkpoint(generator_optimizer=generator_optimizer,
+                                 discriminator_optimizer=discriminator_optimizer,
+                                 generator=generator,
+                                 discriminator=discriminator)
 
 ##### Create dataset ####
-ds_files = tf.data.Dataset.list_files(
-    f'../data/{RESOLUTION}/*.npy', shuffle=True)
-dataset = ds_files.map(process_path)
-train_ds = dataset.shuffle(BUFFER_SIZE).batch(
-    BATCH_SIZE, drop_remainder=True)  # drop if the data is not evenly split
-# Create distributed dataset depending on strategy
-dist_ds = strategy.experimental_distribute_dataset(train_ds)
-
+#ds_files = tf.data.Dataset.list_files(
+#    f'../data/{RESOLUTION}/*.npy', shuffle=True)
+#dataset = ds_files.map(process_path)
+#train_ds = dataset.shuffle(BUFFER_SIZE).batch(
+#    BATCH_SIZE, drop_remainder=True)  # drop if the data is not evenly split
+## Create distributed dataset depending on strategy
+#dist_ds = strategy.experimental_distribute_dataset(train_ds)
+#
 
 # TRAINING LOOP
 EPOCHS = 60
@@ -262,10 +262,64 @@ def train_step(images, disc_updates):
     generator_optimizer.apply_gradients(
         zip(gradients_of_generator, generator.trainable_variables))
 
+def plot(image, cut_off):
+    image = image > cut_off
+    figure = plt.figure()
+    ax = figure.add_subplot(111, projection ='3d')
+    z, x, y = image.nonzero()
+    ax.scatter(x, y, z)
+    ax.set_xlim3d(0, RESOLUTION)
+    ax.set_ylim3d(0, RESOLUTION)
+    ax.set_zlim3d(0, RESOLUTION)
+    plt.show()
 
-print("Starting train")
+#print("Starting train")
 if RESTORE:
     checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
     print('Restoring last model')
 
-train(dist_ds, EPOCHS, NUM_DISC_UPDATES)
+#train(dist_ds, EPOCHS, NUM_DISC_UPDATES)
+
+import matplotlib.pyplot as plt
+
+#figure = plt.figure()
+#n = []
+#col = 5
+#row = 5
+#for i in range(col*row):
+#    noise = tf.random.normal([1, NOISE_DIM])
+#    generated_image = generator(noise, training=False)
+#    img = generated_image[0, :, :, :, 0].numpy() # IMG IS float32 type !
+#    ax = figure.add_subplot(111, projection ='3d')
+#    z, x, y = image.nonzero()
+#    ax.scatter(x, y, z)
+#    ax.set_xlim3d(0, RESOLUTION)
+#    ax.set_ylim3d(0, RESOLUTION)
+#    ax.set_zlim3d(0, RESOLUTION)
+
+def plot_images(columns=5, rows=5, cutoff=0.4):
+    '''
+    Function plotting columns * rows images from CIFAR-10.
+    '''
+    while True:
+        i = input()
+        if i == 'exit':
+            break
+        fig=plt.figure(figsize=(9, 6))
+        print('ploting')
+        for i in range(columns*rows):
+            noise = tf.random.normal([1, NOISE_DIM])
+            generated_image = generator(noise, training=False)
+            img = generated_image[0, :, :, :, 0].numpy() # IMG IS float32 type !
+            img = img > cutoff
+            z, x, y = img.nonzero()
+            ax = fig.add_subplot(rows,columns,i+1, projection='3d')
+            ax.set_xlim3d(0, RESOLUTION)
+            ax.set_ylim3d(0, RESOLUTION)
+            ax.set_zlim3d(0, RESOLUTION)
+            ax.scatter(x, y, z)
+            #ax.plot_wireframe()
+        plt.show()
+
+plot_images(columns=1, rows=1, cutoff=0.1)
+

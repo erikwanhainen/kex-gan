@@ -1,0 +1,1 @@
+scp -r -v -o "IdentitiesOnly=yes" -i ~/.ssh/id_rsa_personal -P 56027 da150x_14@130.237.37.22:~/kex-gan/src/checkpoints/w_128 src/checkpoints
