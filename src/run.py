@@ -281,21 +281,10 @@ if RESTORE:
 #train(dist_ds, EPOCHS, NUM_DISC_UPDATES)
 
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+import mpl_toolkits.mplot3d.axes3d as p3
+from scipy.interpolate import interp1d
 
-#figure = plt.figure()
-#n = []
-#col = 5
-#row = 5
-#for i in range(col*row):
-#    noise = tf.random.normal([1, NOISE_DIM])
-#    generated_image = generator(noise, training=False)
-#    img = generated_image[0, :, :, :, 0].numpy() # IMG IS float32 type !
-#    ax = figure.add_subplot(111, projection ='3d')
-#    z, x, y = image.nonzero()
-#    ax.scatter(x, y, z)
-#    ax.set_xlim3d(0, RESOLUTION)
-#    ax.set_ylim3d(0, RESOLUTION)
-#    ax.set_zlim3d(0, RESOLUTION)
 
 def plot_images(columns=5, rows=5, cutoff=0.4):
     '''
@@ -321,5 +310,49 @@ def plot_images(columns=5, rows=5, cutoff=0.4):
             #ax.plot_wireframe()
         plt.show()
 
-plot_images(columns=1, rows=1, cutoff=0.1)
+#plot_images(columns=1, rows=1, cutoff=0.1)
+
+
+def animated_plot(amount=1, cutoff=0.4):
+
+    def update_plot(num):
+        generated_image = generator(noise[num], training=False)
+        img = generated_image[0, :, :, :, 0].numpy()
+        img = img > cutoff
+        z, x, y = img.nonzero()
+        plot._offsets3d = (x, y, z)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+#   noise = [np.random.random([1, NOISE_DIM]) for _ in range(amount)]
+    
+    fst = np.random.random(NOISE_DIM)
+    snd = np.random.random(NOISE_DIM)
+
+    linfit = interp1d([1,amount], np.vstack([fst, snd]), axis=0)
+    
+    n = [i for i in range(1, amount+1)]
+    
+    noise = []
+    arr = linfit(n)
+    for i in arr:
+        print(max(i))
+        noise.append(np.reshape(i, (1, NOISE_DIM)))
+    
+
+    data = np.zeros((RESOLUTION, RESOLUTION, RESOLUTION))
+    z, x, y = data.nonzero()
+    plot = ax.scatter(x, y, z)
+
+    ax.set_xlim3d(0, RESOLUTION)
+    ax.set_ylim3d(0, RESOLUTION)
+    ax.set_zlim3d(0, RESOLUTION)
+    
+    anim = animation.FuncAnimation(fig, update_plot, frames=amount,
+            blit=False, repeat=True, interval=10)
+    plt.show()
+
+    
+animated_plot(amount=30, cutoff=0.6)
 
