@@ -273,7 +273,7 @@ def plot(image, cut_off):
     ax.set_zlim3d(0, RESOLUTION)
     plt.show()
 
-#print("Starting train")
+print("Starting train")
 if RESTORE:
     checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
     print('Restoring last model')
@@ -290,10 +290,22 @@ def plot_images(columns=5, rows=5, cutoff=0.4):
     '''
     Function plotting columns * rows images from CIFAR-10.
     '''
+    noise = None
     while True:
         i = input()
         if i == 'exit':
             break
+        if i == 'save 1':
+            with open('1.npy', 'wb') as f:
+                np.save(f, noise.numpy())
+            continue
+        if i == 'save 2':
+            with open('2.npy', 'wb') as f:
+                np.save(f, noise.numpy())
+            continue
+        if i == 'gif':
+            animated_plot(amount=50, cutoff=0.5)
+            continue
         fig=plt.figure(figsize=(9, 6))
         print('ploting')
         for i in range(columns*rows):
@@ -306,53 +318,74 @@ def plot_images(columns=5, rows=5, cutoff=0.4):
             ax.set_xlim3d(0, RESOLUTION)
             ax.set_ylim3d(0, RESOLUTION)
             ax.set_zlim3d(0, RESOLUTION)
-            ax.scatter(x, y, z)
-            #ax.plot_wireframe()
+            ax.scatter(x, y, z, s=1)
         plt.show()
-
-#plot_images(columns=1, rows=1, cutoff=0.1)
 
 
 def animated_plot(amount=1, cutoff=0.4):
-
     def update_plot(num):
         generated_image = generator(noise[num], training=False)
         img = generated_image[0, :, :, :, 0].numpy()
         img = img > cutoff
         z, x, y = img.nonzero()
         plot._offsets3d = (x, y, z)
-
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-
-#   noise = [np.random.random([1, NOISE_DIM]) for _ in range(amount)]
-    
+    noise = [np.random.random([1, NOISE_DIM]) for _ in range(amount)]
     fst = np.random.random(NOISE_DIM)
     snd = np.random.random(NOISE_DIM)
-
+    # if two saved noise
+#    fst_np = np.load('1.npy')
+#    fst = tf.convert_to_tensor(fst_np, dtype=tf.float32)
+#    snd_np = np.load('2.npy')
+#    snd = tf.convert_to_tensor(snd_np, dtype=tf.float32)
     linfit = interp1d([1,amount], np.vstack([fst, snd]), axis=0)
-    
     n = [i for i in range(1, amount+1)]
-    
     noise = []
     arr = linfit(n)
     for i in arr:
-        print(max(i))
         noise.append(np.reshape(i, (1, NOISE_DIM)))
-    
-
     data = np.zeros((RESOLUTION, RESOLUTION, RESOLUTION))
     z, x, y = data.nonzero()
-    plot = ax.scatter(x, y, z)
-
+    plot = ax.scatter(x, y, z, s=1)
     ax.set_xlim3d(0, RESOLUTION)
     ax.set_ylim3d(0, RESOLUTION)
     ax.set_zlim3d(0, RESOLUTION)
-    
     anim = animation.FuncAnimation(fig, update_plot, frames=amount,
-            blit=False, repeat=True, interval=10)
-    plt.show()
+            blit=False, repeat=True, interval=20)
+    if save=True:
+        writergif = animation.PillowWriter(fps=15) 
+        anim.save('gif.gif', writer=writergif)
+    else:
+        plt.show()
 
     
-animated_plot(amount=30, cutoff=0.6)
+def epoch_diff(noise=None, cutoff=0.5):
+    if noise is None:
+        noise = tf.random.normal([1, NOISE_DIM])
+    def update_plot_epoch(epoch):
+        checkpoint.restore(os.path.join(checkpoint_dir, f'ckpt-{epoch}'))
+        generated_image = generator(noise, training=False)
+        img = generated_image[0, :, :, :, 0].numpy()
+        img = img > cutoff
+        z, x, y = img.nonzero()
+        plot._offsets3d = (x, y, z)
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    data = np.zeros((RESOLUTION, RESOLUTION, RESOLUTION))
+    z, x, y = data.nonzero()
+    plot = ax.scatter(x, y, z, s=1)
+    ax.set_xlim3d(0, RESOLUTION)
+    ax.set_ylim3d(0, RESOLUTION)
+    ax.set_zlim3d(0, RESOLUTION)
+    anim = animation.FuncAnimation(fig, update_plot_epoch, frames=range(1,110,5),
+            blit=False, repeat=True)
+    writergif = animation.PillowWriter(fps=5) 
+    anim.save('diff.gif', writer=writergif)
+
+#animated_plot(amount=50, cutoff=0.5)
+#plot_images(columns=1, rows=1, cutoff=0.5)
+snd_np = np.load('2.npy')
+snd = tf.convert_to_tensor(snd_np, dtype=tf.float32)
+epoch_diff(snd)
 

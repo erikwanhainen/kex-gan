@@ -120,6 +120,9 @@ class Preprocess():
         ax = figure.add_subplot(111, projection ='3d') 
         z, x, y = image.nonzero()
         ax.scatter(x, y, z, s=1)
+        ax.set_xlim3d(0, SIZE)
+        ax.set_ylim3d(0, SIZE)
+        ax.set_zlim3d(0, SIZE)
         plt.show()
         
 
@@ -142,5 +145,5 @@ def save_all_files():
 
 
 if __name__ == '__main__':
-    p = Preprocess('./swc_files/136009.CNG.swc')
+    p = Preprocess('./swc_files/31887.CNG.swc')
     p.plot(p.get_image())
