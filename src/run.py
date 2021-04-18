@@ -138,7 +138,7 @@ def gradient_penalty(real_data, fake_data, disc):
       real_data: shapes from batch
       fake_data: generated samples
     """
-    bs = int(BATCH_SIZE/2)
+    bs = int(BATCH_SIZE)
     alpha = tf.random.uniform(shape=[bs, 1], minval=0., maxval=1.)
     difference = fake_data - real_data
     inter = []
@@ -195,14 +195,14 @@ checkpoint = tf.train.Checkpoint(generator_optimizer=generator_optimizer,
                                  discriminator=discriminator)
 
 ##### Create dataset ####
-#ds_files = tf.data.Dataset.list_files(
-#    f'../data/{RESOLUTION}/*.npy', shuffle=True)
-#dataset = ds_files.map(process_path)
-#train_ds = dataset.shuffle(BUFFER_SIZE).batch(
-#    BATCH_SIZE, drop_remainder=True)  # drop if the data is not evenly split
-## Create distributed dataset depending on strategy
+ds_files = tf.data.Dataset.list_files(
+    f'src/data/{RESOLUTION}/*.npy', shuffle=True)
+dataset = ds_files.map(process_path)
+train_ds = dataset.shuffle(BUFFER_SIZE).batch(
+    BATCH_SIZE, drop_remainder=True)  # drop if the data is not evenly split
+# Create distributed dataset depending on strategy
 #dist_ds = strategy.experimental_distribute_dataset(train_ds)
-#
+
 
 # TRAINING LOOP
 EPOCHS = 60
@@ -322,7 +322,7 @@ def plot_images(columns=5, rows=5, cutoff=0.4):
         plt.show()
 
 
-def animated_plot(amount=1, cutoff=0.4):
+def animated_plot(amount=1, save=False, cutoff=0.4):
     def update_plot(num):
         generated_image = generator(noise[num], training=False)
         img = generated_image[0, :, :, :, 0].numpy()
@@ -332,13 +332,13 @@ def animated_plot(amount=1, cutoff=0.4):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     noise = [np.random.random([1, NOISE_DIM]) for _ in range(amount)]
-    fst = np.random.random(NOISE_DIM)
-    snd = np.random.random(NOISE_DIM)
-    # if two saved noise
-#    fst_np = np.load('1.npy')
-#    fst = tf.convert_to_tensor(fst_np, dtype=tf.float32)
-#    snd_np = np.load('2.npy')
-#    snd = tf.convert_to_tensor(snd_np, dtype=tf.float32)
+#    fst = np.random.random(NOISE_DIM)
+#    snd = np.random.random(NOISE_DIM)
+   # if two saved noise
+    fst_np = np.load('1.npy')
+    fst = tf.convert_to_tensor(fst_np, dtype=tf.float32)
+    snd_np = np.load('2.npy')
+    snd = tf.convert_to_tensor(snd_np, dtype=tf.float32)
     linfit = interp1d([1,amount], np.vstack([fst, snd]), axis=0)
     n = [i for i in range(1, amount+1)]
     noise = []
@@ -353,8 +353,8 @@ def animated_plot(amount=1, cutoff=0.4):
     ax.set_zlim3d(0, RESOLUTION)
     anim = animation.FuncAnimation(fig, update_plot, frames=amount,
             blit=False, repeat=True, interval=20)
-    if save=True:
-        writergif = animation.PillowWriter(fps=15) 
+    if save:
+        writergif = animation.PillowWriter(fps=10) 
         anim.save('gif.gif', writer=writergif)
     else:
         plt.show()
@@ -370,6 +370,7 @@ def epoch_diff(noise=None, cutoff=0.5):
         img = img > cutoff
         z, x, y = img.nonzero()
         plot._offsets3d = (x, y, z)
+        ax.set_xlabel(f'epoch: {epoch}')
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     data = np.zeros((RESOLUTION, RESOLUTION, RESOLUTION))
@@ -380,12 +381,40 @@ def epoch_diff(noise=None, cutoff=0.5):
     ax.set_zlim3d(0, RESOLUTION)
     anim = animation.FuncAnimation(fig, update_plot_epoch, frames=range(1,110,5),
             blit=False, repeat=True)
-    writergif = animation.PillowWriter(fps=5) 
+    writergif = animation.PillowWriter(fps=1) 
     anim.save('diff.gif', writer=writergif)
 
-#animated_plot(amount=50, cutoff=0.5)
-#plot_images(columns=1, rows=1, cutoff=0.5)
-snd_np = np.load('2.npy')
-snd = tf.convert_to_tensor(snd_np, dtype=tf.float32)
-epoch_diff(snd)
 
+def disc_loss_graph(images):
+    data = []
+    epochs = range(1,110,5)
+    for epoch in epochs:
+        print('epoch', epoch)
+        checkpoint.restore(os.path.join(checkpoint_dir, f'ckpt-{epoch}'))
+        noise = tf.random.normal([int(BATCH_SIZE), NOISE_DIM])
+        with tf.GradientTape() as disc_tape:
+            generated_images = generator(noise, training=False)
+            real_output = discriminator(images, training=False)
+            fake_output = discriminator(generated_images, training=False)
+            disc_ws_loss = ws_disc_loss(real_output, fake_output)
+            g_pen = gradient_penalty(
+                images[0], generated_images, discriminator)
+            disc_loss = disc_ws_loss + LAMBDA*g_pen
+            data.append(float(disc_loss))
+
+    fig, ax1 = plt.subplots(1, 1, figsize=(10,5))
+    ax1.plot(epochs, data, label=f'disc loss')
+    ax1.set_ylabel('loss')
+    ax1.set_xlabel('epoch')
+    ax1.legend()
+    plt.show()
+
+
+#plot_images(columns=1, rows=1, cutoff=0.5)
+#animated_plot(amount=50, save=True, cutoff=0.5)
+#snd_np = np.load('1.npy')
+#snd = tf.convert_to_tensor(snd_np, dtype=tf.float32)
+#epoch_diff(snd)
+for batch in train_ds:
+    disc_loss_graph(batch)
+    break
