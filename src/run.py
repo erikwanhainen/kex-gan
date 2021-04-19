@@ -12,7 +12,7 @@ RESOLUTION = 128
 BUFFER_SIZE = 30  # https://stackoverflow.com/questions/46444018/meaning-of-buffer-size-in-dataset-map-dataset-prefetch-and-dataset-shuffle
 BATCH_SIZE = 32
 NOISE_DIM = 200
-RESTORE = False
+RESTORE = True
 NUM_DISC_UPDATES = 5
 LAMBDA = 10
 
@@ -138,7 +138,7 @@ def gradient_penalty(real_data, fake_data, disc):
       real_data: shapes from batch
       fake_data: generated samples
     """
-    bs = int(BATCH_SIZE/2)
+    bs = int(BATCH_SIZE/4)
     alpha = tf.random.uniform(shape=[bs, 1], minval=0., maxval=1.)
     difference = fake_data - real_data
     inter = []
@@ -205,7 +205,7 @@ dist_ds = strategy.experimental_distribute_dataset(train_ds)
 
 
 # TRAINING LOOP
-EPOCHS = 60
+EPOCHS = 120
 
 
 def train(dataset, epochs, disc_updates):
@@ -231,7 +231,7 @@ def train_step(images, disc_updates):
     """
 
     for _ in range(disc_updates):
-        noise = tf.random.normal([int(BATCH_SIZE/2), NOISE_DIM])
+        noise = tf.random.normal([int(BATCH_SIZE/4), NOISE_DIM])
         with tf.GradientTape() as disc_tape:
             generated_images = generator(noise, training=True)
 
@@ -248,7 +248,7 @@ def train_step(images, disc_updates):
         discriminator_optimizer.apply_gradients(
             zip(gradients_of_discriminator, discriminator.trainable_variables))
 
-    noise = tf.random.normal([int(BATCH_SIZE/2), NOISE_DIM])
+    noise = tf.random.normal([int(BATCH_SIZE/4), NOISE_DIM])
     with tf.GradientTape() as gen_tape:
         generated_images = generator(noise, training=True)
 
