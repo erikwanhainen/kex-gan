@@ -138,14 +138,15 @@ def gradient_penalty(real_data, fake_data, disc):
       real_data: shapes from batch
       fake_data: generated samples
     """
-    bs = int(BATCH_SIZE/2)
-    alpha = tf.random.uniform(shape=[bs, 1], minval=0., maxval=1.)
+    bs = int(BATCH_SIZE/4)
+    alpha = tf.random.uniform(shape=[bs, 1, 1, 1, 1], minval=0., maxval=1.)
     difference = fake_data - real_data
-    inter = []
-    for i in range(bs):
-        inter.append(difference[i] * alpha[i])
-    inter = tf.stack(inter)
-    interpolates = real_data + inter
+    interpolates = real_data + (alpha*difference)
+#    inter = []
+#    for i in range(bs):
+#        inter.append(difference[i] * alpha[i])
+#    inter = tf.stack(inter)
+#    interpolates = real_data + inter
 
     with tf.GradientTape() as tape:
         tape.watch(interpolates)
@@ -156,7 +157,7 @@ def gradient_penalty(real_data, fake_data, disc):
     # Used by 3D-IWGAN & improved_wgan
     # slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=[1]))
 
-    slopes = tf.sqrt(tf.reduce_sum(gradients ** 2, axis=[1]))  # Try this
+    slopes = tf.sqrt(tf.reduce_sum(gradients ** 2, axis=[1, 2, 3, 4]))  # Try this
     gradient_penalty = tf.reduce_mean((slopes-1.)**2)
     return gradient_penalty
 
@@ -231,7 +232,7 @@ def train_step(images, disc_updates):
     """
 
     for _ in range(disc_updates):
-        noise = tf.random.normal([int(BATCH_SIZE/2), NOISE_DIM])
+        noise = tf.random.normal([int(BATCH_SIZE/4), NOISE_DIM])
         with tf.GradientTape() as disc_tape:
             generated_images = generator(noise, training=True)
 
@@ -248,7 +249,7 @@ def train_step(images, disc_updates):
         discriminator_optimizer.apply_gradients(
             zip(gradients_of_discriminator, discriminator.trainable_variables))
 
-    noise = tf.random.normal([int(BATCH_SIZE/2), NOISE_DIM])
+    noise = tf.random.normal([int(BATCH_SIZE/4), NOISE_DIM])
     with tf.GradientTape() as gen_tape:
         generated_images = generator(noise, training=True)
 
