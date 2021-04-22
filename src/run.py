@@ -139,7 +139,7 @@ def gradient_penalty(real_data, fake_data, disc):
       fake_data: generated samples
     """
     bs = int(BATCH_SIZE)
-    alpha = tf.random.uniform(shape=[bs, 1], minval=0., maxval=1.)
+    alpha = tf.random.uniform(shape=[bs, 1, 1, 1, 1], minval=0., maxval=1.)
     difference = fake_data - real_data
     inter = []
     for i in range(bs):
@@ -394,13 +394,13 @@ def epoch_diff(noise=None, cutoff=0.5):
 def disc_loss_graph(train_data, val_data):
     loss = []
     loss_val = []
-    epochs = range(1, 63, 2)
+    epochs = range(1, 61, 2)
+    noise = tf.random.normal([int(BATCH_SIZE), NOISE_DIM])
     for epoch in epochs:
         print('epoch', epoch)
         checkpoint.restore(os.path.join(checkpoint_dir, f'ckpt-{epoch}'))
         with tf.GradientTape() as disc_tape:
             # training
-            noise = tf.random.normal([int(BATCH_SIZE), NOISE_DIM])
             generated_images = generator(noise, training=False)
             real_output = discriminator(train_data, training=False)
             fake_output = discriminator(generated_images, training=False)
@@ -411,7 +411,6 @@ def disc_loss_graph(train_data, val_data):
             loss.append(-1 * float(disc_loss))
 
             # val
-            noise = tf.random.normal([int(BATCH_SIZE), NOISE_DIM])
             generated_images = generator(noise, training=False)
             real_output = discriminator(val_data, training=False)
             fake_output = discriminator(generated_images, training=False)
