@@ -10,7 +10,7 @@ import time
 # CONSTANTS
 RESOLUTION = 128
 BUFFER_SIZE = 30  # https://stackoverflow.com/questions/46444018/meaning-of-buffer-size-in-dataset-map-dataset-prefetch-and-dataset-shuffle
-BATCH_SIZE = 32
+BATCH_SIZE = 16
 NOISE_DIM = 200
 RESTORE = True
 NUM_DISC_UPDATES = 5
@@ -139,7 +139,7 @@ def gradient_penalty(real_data, fake_data, disc):
       fake_data: generated samples
     """
     bs = int(BATCH_SIZE)
-    alpha = tf.random.uniform(shape=[bs, 1], minval=0., maxval=1.)
+    alpha = tf.random.uniform(shape=[bs, 1, 1, 1, 1], minval=0., maxval=1.)
     difference = fake_data - real_data
     inter = []
     for i in range(bs):
@@ -156,7 +156,7 @@ def gradient_penalty(real_data, fake_data, disc):
     # Used by 3D-IWGAN & improved_wgan
     # slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=[1]))
 
-    slopes = tf.sqrt(tf.reduce_sum(gradients ** 2, axis=[1]))  # Try this
+    slopes = tf.sqrt(tf.reduce_sum(gradients ** 2, axis=[1, 2, 3, 4]))  # Try this
     gradient_penalty = tf.reduce_mean((slopes-1.)**2)
     return gradient_penalty
 
@@ -170,7 +170,7 @@ def ws_gen_loss(fake_output):
 
 
 ##### Save and restore model during training #####
-checkpoint_dir = './src/checkpoints/w_128'
+checkpoint_dir = './src/checkpoints/w_128_v2/w_128'
 checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
 
 ##### DEFINE STRATEGY AND INIT MODELS, OPTIMIZERS #####
@@ -199,6 +199,12 @@ ds_files = tf.data.Dataset.list_files(
     f'src/data/{RESOLUTION}/*.npy', shuffle=True)
 dataset = ds_files.map(process_path)
 train_ds = dataset.shuffle(BUFFER_SIZE).batch(
+    BATCH_SIZE, drop_remainder=True)  # drop if the data is not evenly split
+
+ds_files_val = tf.data.Dataset.list_files(
+    f'src/data/{RESOLUTION}_val/*.npy', shuffle=True)
+dataset_val = ds_files_val.map(process_path)
+val_ds = dataset.shuffle(BUFFER_SIZE).batch(
     BATCH_SIZE, drop_remainder=True)  # drop if the data is not evenly split
 # Create distributed dataset depending on strategy
 #dist_ds = strategy.experimental_distribute_dataset(train_ds)
@@ -306,7 +312,7 @@ def plot_images(columns=5, rows=5, cutoff=0.4):
         if i == 'gif':
             animated_plot(amount=50, cutoff=0.5)
             continue
-        fig=plt.figure(figsize=(9, 6))
+        fig=plt.figure()
         print('ploting')
         for i in range(columns*rows):
             noise = tf.random.normal([1, NOISE_DIM])
@@ -379,42 +385,57 @@ def epoch_diff(noise=None, cutoff=0.5):
     ax.set_xlim3d(0, RESOLUTION)
     ax.set_ylim3d(0, RESOLUTION)
     ax.set_zlim3d(0, RESOLUTION)
-    anim = animation.FuncAnimation(fig, update_plot_epoch, frames=range(1,110,5),
+    anim = animation.FuncAnimation(fig, update_plot_epoch, frames=range(1,191,5),
             blit=False, repeat=True)
-    writergif = animation.PillowWriter(fps=1) 
+    writergif = animation.PillowWriter(fps=2) 
     anim.save('diff.gif', writer=writergif)
 
 
-def disc_loss_graph(images):
-    data = []
-    epochs = range(1,110,5)
+def disc_loss_graph(train_data, val_data):
+    loss = []
+    loss_val = []
+    epochs = range(1, 61, 2)
+    noise = tf.random.normal([int(BATCH_SIZE), NOISE_DIM])
     for epoch in epochs:
         print('epoch', epoch)
         checkpoint.restore(os.path.join(checkpoint_dir, f'ckpt-{epoch}'))
-        noise = tf.random.normal([int(BATCH_SIZE), NOISE_DIM])
         with tf.GradientTape() as disc_tape:
+            # training
             generated_images = generator(noise, training=False)
-            real_output = discriminator(images, training=False)
+            real_output = discriminator(train_data, training=False)
             fake_output = discriminator(generated_images, training=False)
             disc_ws_loss = ws_disc_loss(real_output, fake_output)
             g_pen = gradient_penalty(
-                images[0], generated_images, discriminator)
+                train_data[0], generated_images, discriminator)
             disc_loss = disc_ws_loss + LAMBDA*g_pen
-            data.append(float(disc_loss))
+            loss.append(-1 * float(disc_loss))
 
-    fig, ax1 = plt.subplots(1, 1, figsize=(10,5))
-    ax1.plot(epochs, data, label=f'disc loss')
-    ax1.set_ylabel('loss')
-    ax1.set_xlabel('epoch')
-    ax1.legend()
+            # val
+            generated_images = generator(noise, training=False)
+            real_output = discriminator(val_data, training=False)
+            fake_output = discriminator(generated_images, training=False)
+            disc_ws_loss = ws_disc_loss(real_output, fake_output)
+            g_pen = gradient_penalty(
+                val_data[0], generated_images, discriminator)
+            disc_loss = disc_ws_loss + LAMBDA*g_pen
+            loss_val.append(-1 * float(disc_loss))
+
+    fig, ax = plt.subplots(1, 1, figsize=(10,5))
+    ax.plot(epochs, loss, label='Training')
+    ax.plot(epochs, loss_val, label='Validation')
+    ax.set_ylabel('loss')
+    ax.set_xlabel('epoch')
+    ax.legend()
     plt.show()
 
 
 #plot_images(columns=1, rows=1, cutoff=0.5)
 #animated_plot(amount=50, save=True, cutoff=0.5)
-#snd_np = np.load('1.npy')
+#snd_np = np.load('2.npy')
 #snd = tf.convert_to_tensor(snd_np, dtype=tf.float32)
 #epoch_diff(snd)
-for batch in train_ds:
-    disc_loss_graph(batch)
+for b in train_ds:
+    for b_val in val_ds:
+        disc_loss_graph(b, b_val)
+        break
     break
