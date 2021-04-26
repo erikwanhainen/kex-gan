@@ -50,7 +50,7 @@ def plot_images(generator, columns=5, rows=5, cutoff=0.4):
             animated_plot(amount=50, cutoff=0.5)
             continue
         fig = plt.figure()
-        print('ploting')
+        print('plotting')
         for i in range(columns*rows):
             noise = tf.random.normal([1, NOISE_DIM])
             generated_image = generator(noise, training=False)
