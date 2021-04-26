@@ -1,3 +1,7 @@
+from scipy.interpolate import interp1d
+import mpl_toolkits.mplot3d.axes3d as p3
+import matplotlib.animation as animation
+import matplotlib.pyplot as plt
 import tensorflow as tf
 import numpy as np
 from tensorflow.keras import layers
@@ -138,14 +142,15 @@ def gradient_penalty(real_data, fake_data, disc):
       real_data: shapes from batch
       fake_data: generated samples
     """
-    bs = int(BATCH_SIZE)
+    bs = int(BATCH_SIZE/4)
     alpha = tf.random.uniform(shape=[bs, 1, 1, 1, 1], minval=0., maxval=1.)
     difference = fake_data - real_data
-    inter = []
-    for i in range(bs):
-        inter.append(difference[i] * alpha[i])
-    inter = tf.stack(inter)
-    interpolates = real_data + inter
+    interpolates = real_data + (alpha*difference)
+#    inter = []
+#    for i in range(bs):
+#        inter.append(difference[i] * alpha[i])
+#    inter = tf.stack(inter)
+#    interpolates = real_data + inter
 
     with tf.GradientTape() as tape:
         tape.watch(interpolates)
@@ -156,7 +161,8 @@ def gradient_penalty(real_data, fake_data, disc):
     # Used by 3D-IWGAN & improved_wgan
     # slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=[1]))
 
-    slopes = tf.sqrt(tf.reduce_sum(gradients ** 2, axis=[1, 2, 3, 4]))  # Try this
+    slopes = tf.sqrt(tf.reduce_sum(
+        gradients ** 2, axis=[1, 2, 3, 4]))  # Try this
     gradient_penalty = tf.reduce_mean((slopes-1.)**2)
     return gradient_penalty
 
@@ -177,13 +183,13 @@ checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
 
 #strategy = tf.distribute.MirroredStrategy()
 
-#with strategy.scope():
-    # Create the models
+# with strategy.scope():
+# Create the models
 generator = generator_model()
 discriminator = discriminator_model()
 
-    ## Define optimizer  ##
-    # parameters taken from https://github.com/igul222/improved_wgan_training/blob/master/gan_toy.py
+## Define optimizer  ##
+# parameters taken from https://github.com/igul222/improved_wgan_training/blob/master/gan_toy.py
 generator_optimizer = tf.keras.optimizers.Adam(
     1e-4, beta_1=0.5, beta_2=0.9)
 discriminator_optimizer = tf.keras.optimizers.Adam(
@@ -237,7 +243,7 @@ def train_step(images, disc_updates):
     """
 
     for _ in range(disc_updates):
-        noise = tf.random.normal([int(BATCH_SIZE/2), NOISE_DIM])
+        noise = tf.random.normal([int(BATCH_SIZE/4), NOISE_DIM])
         with tf.GradientTape() as disc_tape:
             generated_images = generator(noise, training=True)
 
@@ -254,7 +260,7 @@ def train_step(images, disc_updates):
         discriminator_optimizer.apply_gradients(
             zip(gradients_of_discriminator, discriminator.trainable_variables))
 
-    noise = tf.random.normal([int(BATCH_SIZE/2), NOISE_DIM])
+    noise = tf.random.normal([int(BATCH_SIZE/4), NOISE_DIM])
     with tf.GradientTape() as gen_tape:
         generated_images = generator(noise, training=True)
 
@@ -268,10 +274,11 @@ def train_step(images, disc_updates):
     generator_optimizer.apply_gradients(
         zip(gradients_of_generator, generator.trainable_variables))
 
+
 def plot(image, cut_off):
     image = image > cut_off
     figure = plt.figure()
-    ax = figure.add_subplot(111, projection ='3d')
+    ax = figure.add_subplot(111, projection='3d')
     z, x, y = image.nonzero()
     ax.scatter(x, y, z)
     ax.set_xlim3d(0, RESOLUTION)
@@ -279,17 +286,13 @@ def plot(image, cut_off):
     ax.set_zlim3d(0, RESOLUTION)
     plt.show()
 
+
 print("Starting train")
 if RESTORE:
     checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
     print('Restoring last model')
 
 #train(dist_ds, EPOCHS, NUM_DISC_UPDATES)
-
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-import mpl_toolkits.mplot3d.axes3d as p3
-from scipy.interpolate import interp1d
 
 
 def plot_images(columns=5, rows=5, cutoff=0.4):
@@ -312,15 +315,16 @@ def plot_images(columns=5, rows=5, cutoff=0.4):
         if i == 'gif':
             animated_plot(amount=50, cutoff=0.5)
             continue
-        fig=plt.figure()
+        fig = plt.figure()
         print('ploting')
         for i in range(columns*rows):
             noise = tf.random.normal([1, NOISE_DIM])
             generated_image = generator(noise, training=False)
-            img = generated_image[0, :, :, :, 0].numpy() # IMG IS float32 type !
+            # IMG IS float32 type !
+            img = generated_image[0, :, :, :, 0].numpy()
             img = img > cutoff
             z, x, y = img.nonzero()
-            ax = fig.add_subplot(rows,columns,i+1, projection='3d')
+            ax = fig.add_subplot(rows, columns, i+1, projection='3d')
             ax.set_xlim3d(0, RESOLUTION)
             ax.set_ylim3d(0, RESOLUTION)
             ax.set_zlim3d(0, RESOLUTION)
@@ -345,7 +349,7 @@ def animated_plot(amount=1, save=False, cutoff=0.4):
     fst = tf.convert_to_tensor(fst_np, dtype=tf.float32)
     snd_np = np.load('2.npy')
     snd = tf.convert_to_tensor(snd_np, dtype=tf.float32)
-    linfit = interp1d([1,amount], np.vstack([fst, snd]), axis=0)
+    linfit = interp1d([1, amount], np.vstack([fst, snd]), axis=0)
     n = [i for i in range(1, amount+1)]
     noise = []
     arr = linfit(n)
@@ -358,17 +362,18 @@ def animated_plot(amount=1, save=False, cutoff=0.4):
     ax.set_ylim3d(0, RESOLUTION)
     ax.set_zlim3d(0, RESOLUTION)
     anim = animation.FuncAnimation(fig, update_plot, frames=amount,
-            blit=False, repeat=True, interval=20)
+                                   blit=False, repeat=True, interval=20)
     if save:
-        writergif = animation.PillowWriter(fps=10) 
+        writergif = animation.PillowWriter(fps=10)
         anim.save('gif.gif', writer=writergif)
     else:
         plt.show()
 
-    
+
 def epoch_diff(noise=None, cutoff=0.5):
     if noise is None:
         noise = tf.random.normal([1, NOISE_DIM])
+
     def update_plot_epoch(epoch):
         checkpoint.restore(os.path.join(checkpoint_dir, f'ckpt-{epoch}'))
         generated_image = generator(noise, training=False)
@@ -385,9 +390,9 @@ def epoch_diff(noise=None, cutoff=0.5):
     ax.set_xlim3d(0, RESOLUTION)
     ax.set_ylim3d(0, RESOLUTION)
     ax.set_zlim3d(0, RESOLUTION)
-    anim = animation.FuncAnimation(fig, update_plot_epoch, frames=range(1,191,5),
-            blit=False, repeat=True)
-    writergif = animation.PillowWriter(fps=2) 
+    anim = animation.FuncAnimation(fig, update_plot_epoch, frames=range(1, 191, 5),
+                                   blit=False, repeat=True)
+    writergif = animation.PillowWriter(fps=2)
     anim.save('diff.gif', writer=writergif)
 
 
@@ -420,7 +425,7 @@ def disc_loss_graph(train_data, val_data):
             disc_loss = disc_ws_loss + LAMBDA*g_pen
             loss_val.append(-1 * float(disc_loss))
 
-    fig, ax = plt.subplots(1, 1, figsize=(10,5))
+    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
     ax.plot(epochs, loss, label='Training')
     ax.plot(epochs, loss_val, label='Validation')
     ax.set_ylabel('loss')
@@ -433,7 +438,7 @@ def disc_loss_graph(train_data, val_data):
 #animated_plot(amount=50, save=True, cutoff=0.5)
 #snd_np = np.load('2.npy')
 #snd = tf.convert_to_tensor(snd_np, dtype=tf.float32)
-#epoch_diff(snd)
+# epoch_diff(snd)
 for b in train_ds:
     for b_val in val_ds:
         disc_loss_graph(b, b_val)
