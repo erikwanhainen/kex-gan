@@ -167,4 +167,25 @@ def disc_loss_graph(generator, discriminator, train_data, val_data):
     ax.legend()
     plt.show()
 
+def test_plot(generator, cutoff): 
+    noise = tf.random.normal([1, NOISE_DIM])
+    g_img = generator(noise, training=False)
+    v = g_img[0,:, :, :,0].numpy()
+    v = abs(v)
+    for i in range(RESOLUTION):
+        for j in range(RESOLUTION):
+            for z in range(RESOLUTION):
+                if v[i, j, z] < 0.1:
+                    v[i, j, z] = 0
+    z, x, y = v.nonzero() 
+    f = v[z, x, y] 
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_xlim3d(0, RESOLUTION)
+    ax.set_ylim3d(0, RESOLUTION)
+    ax.set_zlim3d(0, RESOLUTION)
+
+    a=ax.scatter(x, y, z, s=1, c=f, cmap='rainbow')
+    fig.colorbar(a)
+    plt.show()
 

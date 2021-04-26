@@ -11,7 +11,7 @@ from tensorflow.keras import activations
 
 
 from src.model.models import generator_model, discriminator_model
-from src.plot.plot_funcs import animated_plot, plot_images
+from src.plot.plot_funcs import animated_plot, plot_images, test_plot
 
 
 # CONSTANTS
@@ -39,8 +39,9 @@ checkpoint = tf.train.Checkpoint(generator_optimizer=generator_optimizer,
                                  discriminator=discriminator)
 
 if RESTORE:
-    checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+    checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir)).expect_partial()
     print('Restoring last model')
 
-# animated_plot(generator=generator, amount=50, save=False, cutoff=0.5)
-plot_images(generator=generator, cutoff=0.5)
+#animated_plot(generator=generator, amount=50, save=False, cutoff=0.5)
+# plot_images(generator=generator, cutoff=0.5)
+test_plot(generator, 0.5)
