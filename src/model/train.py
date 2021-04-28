@@ -1,9 +1,9 @@
 import tensorflow as tf
 import numpy as np
 
-from src.models.util import load_params
-from src.models.models import generator_model, discriminator_model
-from src.models.losses import gradient_penalty, ws_disc_loss, ws_gen_loss
+from src.model.utils import load_params
+from src.model.models import generator_model, discriminator_model
+from src.model.losses import gradient_penalty, ws_disc_loss, ws_gen_loss
 
 import os
 import time
@@ -73,12 +73,6 @@ dataset = ds_files.map(process_path)
 train_ds = dataset.shuffle(BUFFER_SIZE).batch(
     BATCH_SIZE, drop_remainder=True)  # drop if the data is not evenly split
 
-ds_files_val = tf.data.Dataset.list_files(
-    f'src/data/{RESOLUTION}_val/*.npy', shuffle=True)
-dataset_val = ds_files_val.map(process_path)
-val_ds = dataset.shuffle(BUFFER_SIZE).batch(
-    BATCH_SIZE, drop_remainder=True)  # drop if the data is not evenly split
-# Create distributed dataset depending on strategy
 dist_ds = strategy.experimental_distribute_dataset(train_ds)
 
 
