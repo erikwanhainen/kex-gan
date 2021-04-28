@@ -19,14 +19,17 @@ LAMBDA = params['LAMBDA']
 
 def plot(image, cut_off):
     image = image > cut_off
-    figure = plt.figure()
+    figure = plt.figure(frameon=False, figsize=(10,10))
     ax = figure.add_subplot(111, projection='3d')
+    plt.axis('off')
+    plt.grid(b=None)
     z, x, y = image.nonzero()
-    ax.scatter(x, y, z)
+    ax.scatter(x, y, z, s=1)
     ax.set_xlim3d(0, RESOLUTION)
     ax.set_ylim3d(0, RESOLUTION)
     ax.set_zlim3d(0, RESOLUTION)
     plt.show()
+    #plt.savefig('hej.png', bbox_inches='tight', pad_inches=0)
 
 
 def plot_images(generator, columns=5, rows=5, cutoff=0.4):
@@ -166,5 +169,4 @@ def disc_loss_graph(generator, discriminator, train_data, val_data):
     ax.set_xlabel('epoch')
     ax.legend()
     plt.show()
-
 
