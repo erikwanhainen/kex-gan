@@ -2,8 +2,8 @@ import tensorflow as tf
 import numpy as np
 
 from src.models.util import load_params
-from src.models.models import generator_model, discriminator_model
-from src.models.losses import gradient_penalty, ws_disc_loss, ws_gen_loss
+from src.model.models import generator_model, discriminator_model
+from src.model.losses import gradient_penalty, ws_disc_loss, ws_gen_loss
 
 import os
 import time
