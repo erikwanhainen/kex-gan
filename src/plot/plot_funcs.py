@@ -134,30 +134,29 @@ def disc_loss_graph(generator, discriminator, train_data, val_data):
     loss = []
     loss_val = []
     epochs = range(1, 61, 2)
-    noise = tf.random.normal([int(BATCH_SIZE), NOISE_DIM])
     for epoch in epochs:
         print('epoch', epoch)
+        noise = tf.random.normal([int(BATCH_SIZE), NOISE_DIM])
         checkpoint.restore(os.path.join(checkpoint_dir, f'ckpt-{epoch}'))
-        with tf.GradientTape() as disc_tape:
-            # training
-            generated_images = generator(noise, training=False)
-            real_output = discriminator(train_data, training=False)
-            fake_output = discriminator(generated_images, training=False)
-            disc_ws_loss = ws_disc_loss(real_output, fake_output)
-            g_pen = gradient_penalty(
-                train_data[0], generated_images, discriminator)
-            disc_loss = disc_ws_loss + LAMBDA*g_pen
-            loss.append(-1 * float(disc_loss))
+        # training
+        generated_images = generator(noise, training=False)
+        real_output = discriminator(train_data, training=False)
+        fake_output = discriminator(generated_images, training=False)
+        disc_ws_loss = ws_disc_loss(real_output, fake_output)
+        g_pen = gradient_penalty(
+            train_data[0], generated_images, discriminator)
+        disc_loss = disc_ws_loss + LAMBDA*g_pen
+        loss.append(-1 * float(disc_loss))
 
-            # val
-            generated_images = generator(noise, training=False)
-            real_output = discriminator(val_data, training=False)
-            fake_output = discriminator(generated_images, training=False)
-            disc_ws_loss = ws_disc_loss(real_output, fake_output)
-            g_pen = gradient_penalty(
-                val_data[0], generated_images, discriminator)
-            disc_loss = disc_ws_loss + LAMBDA*g_pen
-            loss_val.append(-1 * float(disc_loss))
+        # val
+        generated_images = generator(noise, training=False)
+        real_output = discriminator(val_data, training=False)
+        fake_output = discriminator(generated_images, training=False)
+        disc_ws_loss = ws_disc_loss(real_output, fake_output)
+        g_pen = gradient_penalty(
+            val_data[0], generated_images, discriminator)
+        disc_loss = disc_ws_loss + LAMBDA*g_pen
+        loss_val.append(-1 * float(disc_loss))
 
     fig, ax = plt.subplots(1, 1, figsize=(10, 5))
     ax.plot(epochs, loss, label='Training')
@@ -166,6 +165,20 @@ def disc_loss_graph(generator, discriminator, train_data, val_data):
     ax.set_xlabel('epoch')
     ax.legend()
     plt.show()
+
+@tf.function
+def disc_loss_batch(generator, discriminator, batch): 
+    noise = tf.random.normal([int(BATCH_SIZE), NOISE_DIM])
+
+    generated_images = generator(noise, training=False)
+    real_output = discriminator(batch, training=False)
+    fake_output = discriminator(generated_images, training=False)
+    disc_ws_loss = ws_disc_loss(real_output, fake_output)
+    g_pen = gradient_penalty(
+        batch[0], generated_images, discriminator)
+    disc_loss = disc_ws_loss + LAMBDA*g_pen
+    return disc_loss*-1
+    
 
 def test_plot(generator, cutoff): 
     noise = tf.random.normal([1, NOISE_DIM])
