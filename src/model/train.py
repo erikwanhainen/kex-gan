@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 
-from src.model.util import load_params
+from src.model.utils import load_params
 from src.model.models import generator_model, discriminator_model
 from src.model.losses import gradient_penalty, ws_disc_loss, ws_gen_loss
 
